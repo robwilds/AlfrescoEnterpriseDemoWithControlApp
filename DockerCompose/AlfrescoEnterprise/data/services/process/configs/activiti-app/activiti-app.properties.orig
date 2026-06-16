@@ -1,0 +1,168 @@
+#
+# Copyright 2018 Alfresco, Inc. and/or its affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#enable default review processes
+app.review-workflows.enabled=true
+
+# Email setup
+email.enabled=true
+email.host=email
+email.port=25
+email.useCredentials=false
+email.username=demo@example.com
+email.password=demo
+email.ssl=false
+email.tls=false
+email.from.default=demo@example.com
+email.from.default.name=ProcessServices
+email.feedback.default=demo@example.com
+email.base.url=email
+
+# Enable incoming auth requests from "alfresco-1" integration and
+# specify the secret value Alfresco is sending to be used for verification.
+integration.login.alfresco-1.secret=60c7404940bae16607a31ae0cb41a459
+
+# Activiti General server settings.
+# http://docs.alfresco.com/activiti/docs/admin-guide/1.5.0/#_general_server_settings for reference
+server.onpremise=true
+server.stencil.custom.allowed=true
+server.contextroot=/activiti-app
+
+# Datasource Information.
+# http://docs.alfresco.com/activiti/docs/admin-guide/1.5.0/#databaseConfiguration for reference.
+
+license.multi-tenant=false
+# Database username and password
+datasource.username=alfresco
+datasource.password=alfresco
+
+# Driver to be used
+#datasource.driver=org.h2.Driver
+
+# Database url. H2 by default, for standalone runs
+# THis should point to your database ( external possibly )
+#datasource.url=jdbc:h2:mem:db1;DB_CLOSE_DELAY=1000
+
+datasource.driver=org.postgresql.Driver
+datasource.url=jdbc:postgresql://postgres:5432/activitiapp
+
+# Hibernate dialect of choice
+#hibernate.dialect=org.hibernate.dialect.H2Dialect
+hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+# ElasticSearch configuration.
+# http://docs.alfresco.com/activiti/docs/admin-guide/1.5.0/#elasticSearchConfig for reference
+
+elastic-search.server.type=none
+#elastic-search.rest-client.address=localhost
+#elastic-search.rest-client.port=9200
+#elastic-search.rest-client.schema=http
+#elastic-search.rest-client.auth.enabled=false
+#elastic-search.rest-client.username=admin
+#elastic-search.rest-client.password=esadmin
+#elastic-search.rest-client.keystore=
+#elastic-search.rest-client.keystore.type=jks
+#elastic-search.rest-client.keystore.password=
+
+event.generation.enabled=false
+event.processing.enabled=false
+
+
+# Admin user informations
+admin.email=admin
+admin.passwordHash=25a463679c56c474f20d8f592e899ef4cb3f79177c19e3782ed827b5c0135c466256f1e7b60e576e
+#admin.passwordHash=$2y$04$WZEvNwH9YJhdDxMYMomPpupSuOjDhb0UpHg2mo.8kqrdTV239jC4u
+admin.lastname=Administrator
+admin.group=Administrators
+
+# ContentStorage
+# http://docs.alfresco.com/activiti/docs/admin-guide/1.5.0/#contentStorageConfig for reference
+contentstorage.fs.rootFolder=/usr/local/data/
+contentstorage.fs.createRoot=true
+contentstorage.fs.depth=4
+contentstorage.fs.blockSize=1024
+
+# Security settings
+security.csrf.disabled=false
+
+#password min length
+security.password.constraints.min-length=8
+#security.password.constraints.reg-exp=^(?=.*[a-z])(?=.*[A-Z]).+$
+
+# USER TOKEN TTL
+# after how long the cookie should expire
+security.cookie.max-age=2678400
+# how often the cookie get controlled
+security.cookie.database-removal.cronExpression=0 0/10 * * * ?
+
+# DISABLE SCRIPTING
+validator.editor.bpmn.disable.scripttask=true
+validator.editor.bpmn.disable.scripttask.groovy=true
+
+# Beans whitelisting
+beans.whitelisting.enabled=false
+
+# EL whitelisting
+el.whitelisting.enabled=false
+
+# CORS settings
+cors.enabled=true
+#cors.allowed.origins=*
+cors.allowed.origin.patterns=*
+cors.allowed.methods=GET,POST,HEAD,OPTIONS,PUT,DELETE
+cors.allowed.headers=Authorization,Content-Type,Cache-Control,X-Requested-With,accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,X-CSRF-Token
+cors.exposed.headers=Access-Control-Allow-Origin,Access-Control-Allow-Credentials
+cors.support.credentials=true
+cors.preflight.maxage=10
+
+# Email template settings
+spring.freemarker.template-loader-path=classpath:/email-templates
+
+#enable cache for static resources for 1 day
+spring.web.resources.cache.period=P1D
+
+# Explicitly declared to disable startup warning
+spring.jpa.open-in-view=true
+
+# Explicitly declared to disable startup warning
+spring.groovy.template.check-template-location=false
+
+# The URL to connect to the LDAP server
+ldap.authentication.java.naming.provider.url=ldap://ldap:389
+
+# The default principal to use (only used for LDAP sync)
+ldap.synchronization.java.naming.security.principal=uid=admin
+
+# The password for the default principal (only used for LDAP sync)
+ldap.synchronization.java.naming.security.credentials=admin
+
+# The authentication mechanism to use for synchronization
+#ldap.synchronization.java.naming.security.authentication=simple
+
+# LDAPS truststore configuration properties
+#ldap.authentication.truststore.path=
+#ldap.authentication.truststore.passphrase=
+#ldap.authentication.truststore.type=
+# Set to 'ssl' to enable truststore configuration via subsystem's properties
+#ldap.authentication.java.naming.security.protocol=ssl
+
+# The LDAP context factory to use
+#ldap.authentication.java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory
+
+# Requests timeout, in miliseconds, use 0 for none (default)
+#ldap.authentication.java.naming.read.timeout=0
+
+# See http://docs.oracle.com/javase/jndi/tutorial/ldap/referral/jndi.html
+#ldap.synchronization.java.naming.referral=follow

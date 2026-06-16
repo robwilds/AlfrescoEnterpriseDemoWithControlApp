@@ -1,0 +1,2 @@
+# The control plane (mgr/server.py) uses only Python stdlib.
+# No external dependencies required.

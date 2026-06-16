@@ -1,0 +1,10 @@
+# System Files
+.DS_Store
+Thumbs.db
+# ignore logs
+**/logs/**/*.log
+**/logs/**/*.txt
+DockerCompose/AlfrescoEnterprise/data/services/queryalfapi/static/*.jpg
+DockerCompose/AlfrescoEnterprise/data/services/queryalfapi/static/swagger.json
+#**/openwebui/
+__pycache__/

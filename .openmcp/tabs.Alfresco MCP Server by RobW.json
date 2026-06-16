@@ -1,0 +1,38 @@
+{
+  "clientId": "325a3e5b-3e5b-5a3e5b8ad24-8a3e5b8ad2413e1-413e18ec",
+  "currentIndex": 0,
+  "tabs": [
+    {
+      "name": "Tools",
+      "icon": "icon-tool",
+      "type": "blank",
+      "componentIndex": 2,
+      "storage": {
+        "activeNames": [
+          0
+        ],
+        "autoDetectDiagram": {
+          "edges": [],
+          "views": []
+        },
+        "formData": {
+          "nodeid": "1a0b110f-1e09-4ca2-b367-fe25e4964a4e",
+          "tag": "notready"
+        },
+        "currentToolName": "addTagtoNode",
+        "lastToolCallResponse": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"entry\":{\"tag\":\"notready\",\"id\":\"ad37be3a-1a49-4d8f-b7be-3a1a496d8f1c\"}}"
+            }
+          ],
+          "structuredContent": {
+            "result": "{\"entry\":{\"tag\":\"notready\",\"id\":\"ad37be3a-1a49-4d8f-b7be-3a1a496d8f1c\"}}"
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}
