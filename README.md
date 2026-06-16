@@ -4,6 +4,14 @@ Portable Docker Compose demo of **Alfresco Content Services 26.1 (Governance Edi
 
 Includes: FastMCP server and an Open WebUI chat interface.
 
+## Prerequisites
+
+Before using the Control Plane UI, ensure the following are installed on your system:
+
+- **Python** (any recent 3.x version)
+- **Docker** (Docker Desktop or equivalent)
+- **A web browser** of your choice
+
 ## Getting Started using Control Plane UI
 
 The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700** providing a full management interface:
