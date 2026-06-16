@@ -11,6 +11,7 @@ Before using the Control Plane UI, ensure the following are installed on your sy
 - **Python** (any recent 3.x version)
 - **Docker** (Docker Desktop or equivalent)
 - **A web browser** of your choice
+- **Quay.io credentails**
 
 ## Getting Started using Control Plane UI
 
