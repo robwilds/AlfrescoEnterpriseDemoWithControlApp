@@ -438,6 +438,20 @@
       .log-content.open {
         display: block;
       }
+      .prop-row td {
+        padding: 0 8px 8px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .prop-row:hover td {
+        background: transparent;
+      }
+      .prop-content {
+        display: none;
+        padding: 4px 0;
+      }
+      .prop-content.open {
+        display: block;
+      }
       .log-line-error {
         color: var(--red);
       }
@@ -461,6 +475,41 @@
       .file-item .btn {
         padding: 2px 6px;
         font-size: 10px;
+      }
+
+      .properties-textarea {
+        width: 100%;
+        min-height: 320px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 11px;
+        padding: 8px;
+        resize: vertical;
+        line-height: 1.5;
+        tab-size: 2;
+      }
+      .properties-textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .properties-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+      }
+      .properties-status {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .properties-status.saved {
+        color: var(--green);
+      }
+      .properties-status.error {
+        color: var(--red);
       }
 
       .docker-overlay {
@@ -948,6 +997,8 @@
       let containersRunning = false;
       let openLogs = new Set();
       let logCache = {};
+      let propertiesOpen = false;
+      let propertiesDraft = null;
 
       function escHtml(str) {
         var d = document.createElement('div');
@@ -1048,6 +1099,87 @@
         document.getElementById(`${group}-${target}`).classList.add("active");
       }
 
+      async function refreshProperties() {
+        if (!propertiesOpen) return;
+        const el = document.getElementById("props-alfresco");
+        if (!el) return;
+        const textarea = document.getElementById("properties-content");
+        if (textarea && document.activeElement === textarea) {
+          return;
+        }
+        try {
+          const data = await api("/api/properties");
+          if (data.error) {
+            el.innerHTML = '<div class="empty">' + esc(data.error) + '</div>';
+            return;
+          }
+          const currentContent = data.content || "";
+          el.innerHTML =
+            '<textarea class="properties-textarea" id="properties-content" spellcheck="false">' +
+            esc(currentContent) +
+            '</textarea>' +
+            '<div class="properties-actions">' +
+            '<button class="btn btn-primary btn-sm" onclick="saveProperties()">Save</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="refreshProperties()">Discard &amp; Reload</button>' +
+            '<span class="properties-status" id="properties-status"></span>' +
+            '</div>';
+        } catch (e) {
+          el.innerHTML = '<div class="empty">Error loading properties: ' + esc(e.message) + '</div>';
+        }
+      }
+
+      async function toggleProperties() {
+        if (propertiesOpen) {
+          const el = document.getElementById("props-alfresco");
+          if (el) el.classList.remove("open");
+          propertiesOpen = false;
+          propertiesDraft = null;
+          const toggle = document.querySelector(".props-toggle");
+          if (toggle) toggle.textContent = "▶ Edit Global Properties";
+          return;
+        }
+        propertiesOpen = true;
+        const toggle = document.querySelector(".props-toggle");
+        if (toggle) toggle.textContent = "▼ Properties";
+        const el = document.getElementById("props-alfresco");
+        if (el) el.classList.add("open");
+        await refreshProperties();
+      }
+
+      async function saveProperties() {
+        const textarea = document.getElementById("properties-content");
+        if (!textarea) return;
+        const content = textarea.value;
+        const btn = document.querySelector("#props-alfresco .btn-primary");
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+        const statusEl = document.getElementById("properties-status");
+        statusEl.textContent = "";
+        statusEl.className = "properties-status";
+        try {
+          const res = await api("/api/properties", {
+            method: "POST",
+            body: JSON.stringify({ content }),
+          });
+          if (res.success) {
+            statusEl.textContent = "\u2713 Saved";
+            statusEl.className = "properties-status saved";
+            showToast("Properties saved \u2014 restart Alfresco for changes to take effect", "success");
+            showRestartPrompt("alfresco");
+          } else {
+            statusEl.textContent = "\u2717 " + (res.error || "save failed");
+            statusEl.className = "properties-status error";
+            showToast("Save failed: " + (res.error || "unknown error"), "error");
+          }
+        } catch (e) {
+          statusEl.textContent = "\u2717 " + e.message;
+          statusEl.className = "properties-status error";
+          showToast("Save failed: " + e.message, "error");
+        }
+        btn.disabled = false;
+        btn.textContent = "Save";
+      }
+
       async function refreshServices() {
         const data = await api("/api/services");
         const total = data.length;
@@ -1061,6 +1193,10 @@
         link.style.display = running > 0 ? "" : "none";
 
         const el = document.getElementById("services-list");
+        if (propertiesOpen) {
+          const ta = document.getElementById("properties-content");
+          if (ta) propertiesDraft = ta.value;
+        }
         let html =
           "<table><thead><tr><th>Service</th><th>Status</th><th></th></tr></thead><tbody>";
         for (const s of data) {
@@ -1081,8 +1217,14 @@
             s.running && s.container_id
               ? `<a href="${escAttr(s.dozzle_url)}" target="_blank" class="btn btn-outline btn-sm" title="View in Dozzle">Dozzle ↗</a>`
               : "";
-          html += `<tr><td class="name-cell">${esc(s.name)}${profileTag}<span class="service-buttons">${logsBtn}${dozzleLink}</span></td><td><span class="status-dot ${statusClass}"></span> ${statusLabel}</td><td style="text-align:right;white-space:nowrap">${actions}</td></tr>`;
+          const propsBtn = s.name === "alfresco"
+            ? `<span class="props-toggle btn btn-outline btn-sm" onclick="toggleProperties()">${propertiesOpen ? '▼ Properties' : '▶ Edit Global Properties'}</span>`
+            : "";
+          html += `<tr><td class="name-cell">${esc(s.name)}${profileTag}<span class="service-buttons">${propsBtn}${logsBtn}${dozzleLink}</span></td><td><span class="status-dot ${statusClass}"></span> ${statusLabel}</td><td style="text-align:right;white-space:nowrap">${actions}</td></tr>`;
           html += `<tr class="log-row" id="log-row-${name}"><td colspan="3"><div class="log-content" id="logs-${name}"></div></td></tr>`;
+          if (s.name === "alfresco") {
+            html += `<tr class="prop-row" id="prop-row-alfresco"><td colspan="3"><div class="prop-content" id="props-alfresco"></div></td></tr>`;
+          }
         }
         html += "</tbody></table>";
         el.innerHTML = html;
@@ -1098,6 +1240,23 @@
             );
             if (toggle) toggle.textContent = "▼ Hide Logs";
             refreshLogContent(name);
+          }
+        }
+        if (propertiesOpen) {
+          const elProp = document.getElementById("props-alfresco");
+          if (elProp) {
+            elProp.classList.add("open");
+            const toggle = document.querySelector(".props-toggle");
+            if (toggle) toggle.textContent = "▼ Properties";
+            elProp.innerHTML =
+              '<textarea class="properties-textarea" id="properties-content" spellcheck="false">' +
+              esc(propertiesDraft || "") +
+              '</textarea>' +
+              '<div class="properties-actions">' +
+              '<button class="btn btn-primary btn-sm" onclick="saveProperties()">Save</button>' +
+              '<button class="btn btn-outline btn-sm" onclick="refreshProperties()">Discard &amp; Reload</button>' +
+              '<span class="properties-status" id="properties-status"></span>' +
+              '</div>';
           }
         }
         const alfrescoSvc = data.find((s) => s.name === "alfresco");

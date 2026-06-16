@@ -1,0 +1,3 @@
+custom jar file for process services
+modify ADW configuration file
+modify alfresco global properties

@@ -14,6 +14,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 PROJECT_ROOT = Path(__file__).parent.parent
 COMPOSE_DIR = PROJECT_ROOT / "DockerCompose" / "AlfrescoEnterprise"
 TRACKED_JARS_FILE = Path(__file__).parent / "data" / "installed_jars.json"
+ALFRESCO_GLOBAL_PROPERTIES = COMPOSE_DIR / "data" / "services" / "content" / "alfresco-global.properties"
 
 ALFRESCO_CONTAINER = None
 SHARE_CONTAINER = None
@@ -614,6 +615,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path.startswith("/static/"):
             return send_html(self, str(STATIC_DIR / path.split("/", 2)[-1]))
 
+        if path == "/api/properties":
+            content = read_file(ALFRESCO_GLOBAL_PROPERTIES)
+            if content is None:
+                return send_json(self, {"error": "file not found"}, 404)
+            return send_json(self, {"content": content})
+
         if path == "/api/status":
             detect_containers()
             return send_json(
@@ -710,6 +717,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(length)) if length else {}
 
         detect_containers()
+
+        if parsed.path == "/api/properties":
+            new_content = body.get("content")
+            if new_content is None:
+                return send_json(self, {"error": "content required"}, 400)
+            try:
+                ALFRESCO_GLOBAL_PROPERTIES.write_text(new_content)
+                return send_json(self, {"success": True})
+            except Exception as e:
+                return send_json(self, {"error": str(e)}, 500)
 
         if parsed.path == "/api/upload":
             target = body.get("target")
