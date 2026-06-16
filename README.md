@@ -15,6 +15,7 @@ Before using the Control Plane UI, ensure the following are installed on your sy
 ## Getting Started using Control Plane UI
 
 The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700** providing a full management interface:
+** make sure to run chmod +x start.sh to make that script executable **
 
 ### Service Management
 
