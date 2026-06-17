@@ -1945,6 +1945,7 @@
 
       function showStartPrompt() {
         if (startPromptDismissed) return;
+        if (containersRunning) return;
         if (dockerReady) {
           document.getElementById("start-overlay").classList.remove("hidden");
         }
