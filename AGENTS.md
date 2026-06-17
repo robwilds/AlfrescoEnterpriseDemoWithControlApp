@@ -47,6 +47,8 @@ Start them with: `docker compose --profile disabled up -d <service>`
 2. Use the Control Plane UI (`start.sh` → port 9700) to install, OR
 3. Run `tools/install_amps_and_jars.sh` manually
 
+**AMP removal:** Installed AMPs that were installed via the Control Plane show a **Remove** button (determined by the presence of a `.applied` file in the container's amps dir). Clicking it runs `alfresco-mmt uninstall` to remove the module from the WAR and reverts the `.applied` file back to `.amp` so it reappears as pending.
+
 Pre-installed extensions live in `DockerCompose/AlfrescoEnterprise/data/services/content/amps/` and `DockerCompose/AlfrescoEnterprise/data/services/share/amps/`.
 
 ## Data persistence
@@ -91,7 +93,8 @@ Pre-installed extensions live in `DockerCompose/AlfrescoEnterprise/data/services
 | Container logs | Inline expandable log viewer per running service (last 20 lines via `/api/logs/<service>`). Logs auto-refresh every poll cycle while the accordion is open, and auto-scroll to the bottom on each update. Dozzle link opens container logs on port 9999 |
 | AMP / JAR installation | Upload files to the `installs/` directory, then install AMPs into running containers via MMT, or copy JARs into WEB-INF/lib. Shows "Restart Required" prompt after install. Clicking "Restart Now" for Alfresco triggers the "waiting for Alfresco" banner |
 | Safe JAR removal | Only manually installed JARs show the Remove button — built-in Alfresco/Share JARs are protected. Tracked in `mgr/data/installed_jars.json` on the host |
-| AMP install detection | Uses `alfresco-mmt list` (via module ID extracted from the AMP's `module.properties`) for accurate install status. Falls back to `.applied` file check if the AMP was deleted from `installs/`. Previously relied solely on `.applied` files which persisted across container recreation |
+| Safe AMP removal | Only AMPs installed via the Control Plane (those with a `.applied` file in the container's amps dir) show a Remove button. Clicking it runs `alfresco-mmt uninstall` to purge the module from the WAR, then reverts `.applied` → `.amp` so it reappears as pending |
+| AMP install / remove detection | Installed AMPs listed via `alfresco-mmt list`. The `removable` flag is determined dynamically by scanning the container's amps dir for `.applied` files, extracting each one's `module.id` via `module.properties`, and cross-referencing with MMT's module list |
 | Quay.io login | Credential overlay shown only when `docker compose config --images` reveals quay.io images that are not locally cached. Uses `docker login quay.io` to authenticate, then starts containers |
 | Refresh interval | Normal polling is 5 seconds (`setInterval` in `restoreNormalRefresh`). Fast polling (1s) during start/stop/restart operations |
 
@@ -123,6 +126,7 @@ The `waitingForAlfresco` flag gates the banner. It is set to `true` in `startAll
 | POST | `/api/install/jar` | Copy JAR into container |
 | POST | `/api/install/amp` | Install AMP via MMT |
 | POST | `/api/remove/jar` | Remove JAR from container |
+| POST | `/api/uninstall/amp` | Uninstall AMP from WAR via MMT (module_id + container) |
 | POST | `/api/delete-file` | Delete file from installs directory |
 | POST | `/api/docker/login` | `docker login quay.io` |
 | POST | `/api/launch-docker` | Open Docker Desktop |

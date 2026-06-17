@@ -40,6 +40,7 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 - **Install All** — batch-installs all uninstalled AMPs and JARs for a service with progress counter
 - **Install status detection** — uses MMT's module list for accurate AMP install status (module ID extracted from AMP's `module.properties`), falling back to `.applied` file check if the AMP was deleted locally
 - **Safe JAR removal** — only manually installed JARs show a Remove button; built-in Alfresco/Share JARs are protected
+- **Safe AMP removal** — only AMPs installed via the Control Plane (those with a `.applied` file in the container's amps dir) show a Remove button; clicking it runs `alfresco-mmt uninstall` to remove the module from the WAR and reverts `.applied` → `.amp` so it reappears as pending
 - **Pending vs installed** — AMP files in the container's `amps/` directory shown as pending; already-installed AMPs shown with install status
 - **Delete file** — remove uploaded files from the `installs/` directory
 
@@ -109,6 +110,7 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 | POST   | `/api/install/jar`        | Copy JAR into container WEB-INF/lib                                        |
 | POST   | `/api/install/amp`        | Install AMP via MMT                                                        |
 | POST   | `/api/remove/jar`         | Remove JAR from container (tracked only)                                   |
+| POST   | `/api/uninstall/amp`      | Uninstall AMP from WAR via MMT (module_id + container)                     |
 | POST   | `/api/delete-file`        | Delete file from installs directory                                        |
 | POST   | `/api/docker/login`       | `docker login quay.io`                                                     |
 | POST   | `/api/launch-docker`      | Open Docker Desktop (macOS)                                                |
