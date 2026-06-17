@@ -1342,9 +1342,13 @@
           html += '<div class="empty">none</div>';
         } else {
           html +=
-            "<table><thead><tr><th>Title</th><th>Version</th><th>ID</th></tr></thead><tbody>";
+            "<table><thead><tr><th>Title</th><th>Version</th><th>ID</th><th></th></tr></thead><tbody>";
           for (const a of installed) {
-            html += `<tr><td class="name-cell">${esc(a.title || a.id)}</td><td class="mono">${esc(a.version || "-")}</td><td class="muted mono">${esc(a.id)}</td></tr>`;
+            const mid = escAttr(a.id);
+            const uninstallBtn = a.removable
+              ? `<button class="btn btn-danger btn-sm" onclick="uninstallAmp('${mid}','${svc}')">Remove</button>`
+              : "";
+            html += `<tr><td class="name-cell">${esc(a.title || a.id)}</td><td class="mono">${esc(a.version || "-")}</td><td class="muted mono">${esc(a.id)}</td><td style="text-align:right;white-space:nowrap">${uninstallBtn}</td></tr>`;
           }
           html += "</tbody></table>";
         }
@@ -1375,10 +1379,14 @@
           html += '<div class="empty">none</div>';
         } else {
           html +=
-            "<table><thead><tr><th>Service</th><th>Title</th><th>Version</th><th>ID</th></tr></thead><tbody>";
+            "<table><thead><tr><th>Service</th><th>Title</th><th>Version</th><th>ID</th><th></th></tr></thead><tbody>";
           for (const a of allInstalled) {
             const label = a.service === "alfresco" ? "Alfresco" : "Share";
-            html += `<tr><td><span class="badge not-found">${label}</span></td><td class="name-cell">${esc(a.title || a.id)}</td><td class="mono">${esc(a.version || "-")}</td><td class="muted mono">${esc(a.id)}</td></tr>`;
+            const mid = escAttr(a.id);
+            const uninstallBtn = a.removable
+              ? `<button class="btn btn-danger btn-sm" onclick="uninstallAmp('${mid}','${a.service}')">Remove</button>`
+              : "";
+            html += `<tr><td><span class="badge not-found">${label}</span></td><td class="name-cell">${esc(a.title || a.id)}</td><td class="mono">${esc(a.version || "-")}</td><td class="muted mono">${esc(a.id)}</td><td style="text-align:right;white-space:nowrap">${uninstallBtn}</td></tr>`;
           }
           html += "</tbody></table>";
         }
@@ -1522,6 +1530,21 @@
           showRestartPrompt(svc);
         } else {
           showToast(res.error || "install failed", "error");
+        }
+      }
+
+      async function uninstallAmp(moduleId, svc) {
+        const res = await api("/api/uninstall/amp", {
+          method: "POST",
+          body: JSON.stringify({ container: svc, module_id: moduleId }),
+        });
+        if (res.success) {
+          showToast(`${moduleId}: ${res.message}`, "success");
+          await refreshAmps();
+          await refreshFiles();
+          showRestartPrompt(svc);
+        } else {
+          showToast(res.error || "uninstall failed", "error");
         }
       }
 

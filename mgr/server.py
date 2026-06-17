@@ -4,6 +4,7 @@ import json
 import os
 import shlex
 import subprocess
+import tempfile
 import urllib.parse
 import zipfile
 from pathlib import Path
@@ -316,9 +317,39 @@ def read_file(path):
         return None
 
 
+def _get_applied_amp_ids(container, svc):
+    """Scan container's amps dir for .applied files and return their module IDs."""
+    if not container:
+        return set()
+    amps_dir = "amps" if svc == "alfresco" else "amps_share"
+    ls = run(["docker", "exec", container, "ls", f"/usr/local/tomcat/{amps_dir}/"], timeout=10)
+    if ls.returncode != 0:
+        return set()
+    ids = set()
+    with tempfile.TemporaryDirectory() as tmp:
+        for fname in ls.stdout.splitlines():
+            if not fname.endswith(".applied"):
+                continue
+            local = Path(tmp) / fname
+            cp = run(["docker", "cp", f"{container}:/usr/local/tomcat/{amps_dir}/{fname}", str(local)], timeout=10)
+            if cp.returncode != 0 or not local.exists():
+                continue
+            try:
+                with zipfile.ZipFile(str(local)) as zf:
+                    with zf.open("module.properties") as f:
+                        for line in f.read().decode().splitlines():
+                            if line.startswith("module.id="):
+                                ids.add(line.split("=", 1)[1].strip())
+                                break
+            except Exception:
+                pass
+    return ids
+
+
 def api_list_amps(container, svc):
     if not container:
         return {"error": "container not found"}
+    applied_ids = _get_applied_amp_ids(container, svc)
     r = run(
         [
             "docker",
@@ -338,7 +369,8 @@ def api_list_amps(container, svc):
         for line in r.stdout.splitlines():
             line = line.strip()
             if line.startswith("Module"):
-                amps.append({"id": line.split("'")[1], "status": "installed"})
+                mod_id = line.split("'")[1]
+                amps.append({"id": mod_id, "status": "installed", "removable": mod_id in applied_ids})
             elif line.startswith("Title:"):
                 if amps:
                     amps[-1]["title"] = line.split(":", 1)[1].strip()
@@ -484,6 +516,51 @@ def do_install_amp(container, filename, svc):
         run(["docker", "exec", "--user", "root", container, "mv", f"/usr/local/tomcat/{amps_dir}/{filename}", f"/usr/local/tomcat/{amps_dir}/{base}.applied"])
         return {"success": True, "message": f"{filename} already installed (applied)"}
     return {"error": f"install failed: {r.stderr or r.stdout}"}
+
+
+def do_uninstall_amp(container, module_id, svc):
+    if not container:
+        return {"error": "container not found"}
+    webapp = "alfresco" if svc == "alfresco" else "share"
+    amps_dir = "amps" if svc == "alfresco" else "amps_share"
+    # Uninstall the module from the WAR via MMT
+    r = run([
+        "docker", "exec", "--user", "root", container,
+        "java", "-jar",
+        "/usr/local/tomcat/alfresco-mmt/alfresco-mmt-26.1.0.61.jar",
+        "uninstall", module_id,
+        f"/usr/local/tomcat/webapps/{webapp}",
+    ], timeout=30)
+    if r.returncode != 0:
+        return {"error": f"uninstall failed: {r.stderr or r.stdout}"}
+    # Find the matching .applied file and rename it back to .amp
+    ls = run(["docker", "exec", container, "ls", f"/usr/local/tomcat/{amps_dir}/"], timeout=10)
+    renamed = False
+    if ls.returncode == 0:
+        with tempfile.TemporaryDirectory() as tmp:
+            for fname in ls.stdout.splitlines():
+                if not fname.endswith(".applied"):
+                    continue
+                base = fname.rsplit(".", 1)[0]
+                local = Path(tmp) / fname
+                cp = run(["docker", "cp", f"{container}:/usr/local/tomcat/{amps_dir}/{fname}", str(local)], timeout=10)
+                if cp.returncode != 0 or not local.exists():
+                    continue
+                try:
+                    with zipfile.ZipFile(str(local)) as zf:
+                        with zf.open("module.properties") as f:
+                            for line in f.read().decode().splitlines():
+                                if line.strip() == f"module.id={module_id}":
+                                    run(["docker", "exec", "--user", "root", container,
+                                         "mv", f"/usr/local/tomcat/{amps_dir}/{fname}",
+                                         f"/usr/local/tomcat/{amps_dir}/{base}.amp"])
+                                    renamed = True
+                                    break
+                except Exception:
+                    pass
+                if renamed:
+                    break
+    return {"success": True, "message": f"{module_id} removed{' and .applied reverted to .amp' if renamed else ''}"}
 
 
 def do_install_jar(container, filename, svc):
@@ -829,6 +906,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return send_json(self, {"error": "container and filename required"}, 400)
             cname = ALFRESCO_CONTAINER if container == "alfresco" else SHARE_CONTAINER
             result = do_remove_jar(cname, filename, container)
+            return send_json(self, result)
+
+        if parsed.path == "/api/uninstall/amp":
+            container = body.get("container")
+            module_id = body.get("module_id")
+            if not container or not module_id:
+                return send_json(self, {"error": "container and module_id required"}, 400)
+            cname = ALFRESCO_CONTAINER if container == "alfresco" else SHARE_CONTAINER
+            result = do_uninstall_amp(cname, module_id, container)
             return send_json(self, result)
 
         send_json(self, {"error": "not found"}, 404)
