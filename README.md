@@ -86,7 +86,7 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 | Alfresco               | http://localhost:8080/alfresco       | `admin`                      | `admin`  | -                                                |
 | phpLDAPadmin           | http://localhost:8400                | `cn=admin,dc=example,dc=com` | `admin`  | LDAP browser UI                                  |
 | Process Services       | http://localhost:8080/activiti-app   | `admin`                      | `admin`  | Requires license to be applied first             |
-| Process Services       | http://localhost:8080/activiti-app   | `demo@example.com`           | `demo`   | Requires license to be applied first             |
+| Process Services       | http://localhost:8080/activiti-app   | `demo@example.com`           | `demo`   | this login works after applying the license      |
 | Process Services Admin | http://localhost:8080/activiti-admin | `admin`                      | `admin`  | Requires license to be applied first             |
 | Rainloop Webmail       | http://localhost:8800                | `demo@example.com`           | `demo`   | Webmail client                                   |
 | Open WebUI             | http://localhost:3000                | `demo@example.com`           | `demo`   | Pre-configured to talk to wildsalfmcp MCP server |
