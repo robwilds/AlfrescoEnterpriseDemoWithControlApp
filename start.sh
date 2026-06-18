@@ -7,6 +7,9 @@ if [ ! -f mgr/server.py ]; then
 fi
 
 echo "Starting Alfresco Control Plane..."
+# Kill any previous instance
+pkill -f "python3 mgr/server.py" 2>/dev/null || true
+sleep 0.5
 python3 mgr/server.py &
 SERVER_PID=$!
 

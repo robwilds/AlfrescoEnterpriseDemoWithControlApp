@@ -32,6 +32,13 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 - **Error highlighting** — lines containing `ERROR`, `FATAL`, `Exception`, `Traceback`, etc. rendered in red
 - **Dozzle link** — per-service link to open full real-time logs in Dozzle (port 9999)
 
+### Run Command
+
+- **"▶ Run" button** on each running service opens a modal to execute arbitrary shell commands inside the container
+- **Command input** — type any command (e.g., `ls -la`, `ps aux`, `cat /etc/hosts`) and execute via `docker exec <cid> sh -c "<cmd>"`
+- **Command history** — ↑/↓ arrow keys recall previous commands within the session for quick re-execution
+- **Output display** — shows stdout/stderr with exit code highlighted in red if non-zero
+
 ### Extensions Management (AMPs & JARs)
 
 - **Upload** — upload AMP/JAR files to `installs/content/` or `installs/share/`
@@ -117,6 +124,7 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 | POST   | `/api/uninstall/amp`      | Uninstall AMP from WAR via MMT (module_id + container)                     |
 | POST   | `/api/delete-file`        | Delete file from installs directory                                        |
 | POST   | `/api/docker/login`       | `docker login quay.io`                                                     |
+| POST   | `/api/exec/<service>`     | Run a shell command in a container via `docker exec`                       |
 | POST   | `/api/launch-docker`      | Open Docker Desktop (macOS)                                                |
 
 ### Key files

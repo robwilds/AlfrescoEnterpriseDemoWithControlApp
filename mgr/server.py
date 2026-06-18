@@ -7,7 +7,9 @@ import subprocess
 import tempfile
 import urllib.parse
 import zipfile
+import base64
 from pathlib import Path
+from socketserver import ThreadingMixIn
 
 HOST = "0.0.0.0"
 PORT = 9700
@@ -86,6 +88,9 @@ def _get_amp_module_id(local_path):
     except Exception:
         return None
     return None
+
+
+
 
 
 def _get_installed_amp_ids(container, svc):
@@ -668,6 +673,8 @@ def send_html(handler, path):
         handler.send_response(200)
         handler.send_header("Content-Type", ct)
         handler.send_header("Content-Length", str(len(content)))
+        if ext == ".html":
+            handler.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         handler.end_headers()
         handler.wfile.write(content)
     except FileNotFoundError:
@@ -917,6 +924,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
             result = do_uninstall_amp(cname, module_id, container)
             return send_json(self, result)
 
+        if parsed.path.startswith("/api/exec/"):
+            service = parsed.path[len("/api/exec/"):]
+            command = body.get("command", "")
+            if not command:
+                return send_json(self, {"error": "command required"}, 400)
+            cid = get_container_id(service)
+            if not cid:
+                return send_json(self, {"error": "container not found"}, 404)
+            try:
+                r = subprocess.run(
+                    ["docker", "exec", cid, "sh", "-c", command],
+                    capture_output=True, text=True, timeout=30,
+                )
+                return send_json(self, {
+                    "stdout": r.stdout,
+                    "stderr": r.stderr,
+                    "returncode": r.returncode,
+                })
+            except subprocess.TimeoutExpired:
+                return send_json(self, {"error": "command timed out"}, 504)
+            except Exception as e:
+                return send_json(self, {"error": str(e)}, 500)
+
         send_json(self, {"error": "not found"}, 404)
 
     def log_message(self, format, *args):
@@ -926,8 +956,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
 import signal
 import sys
 
-# ... (lines 2-505) ...
-
 def shutdown(signum, frame):
     print("\nShutting down server...")
     sys.exit(0)
@@ -935,8 +963,12 @@ def shutdown(signum, frame):
 signal.signal(signal.SIGINT, shutdown)
 signal.signal(signal.SIGTERM, shutdown)
 
+class ThreadedHTTPServer(ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
     detect_containers()
-    server = http.server.HTTPServer((HOST, PORT), Handler)
+    server = ThreadedHTTPServer((HOST, PORT), Handler)
     server.serve_forever()
 

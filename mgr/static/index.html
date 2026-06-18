@@ -456,6 +456,8 @@
         color: var(--red);
       }
 
+
+
       .file-list {
         display: flex;
         flex-wrap: wrap;
@@ -612,6 +614,91 @@
         font-size: 11px;
         color: var(--muted);
       }
+
+      .run-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .run-modal.hidden {
+        display: none;
+      }
+      .run-modal .modal {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 640px;
+        width: 90%;
+      }
+      .run-modal .modal h2 {
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .run-modal .modal .run-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .run-modal .modal input {
+        width: 100%;
+        padding: 8px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      .run-modal .modal input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .run-modal .modal .run-output {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: var(--muted);
+        margin-bottom: 12px;
+        display: none;
+      }
+      .run-modal .modal .run-output.show {
+        display: block;
+      }
+      .run-modal .modal .run-output .error-text {
+        color: var(--red);
+      }
+      .run-modal .modal .run-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .run-loading {
+        display: none;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .run-loading.show {
+        display: inline;
+      }
+      .run-history-hint {
+        font-size: 11px;
+        color: var(--muted);
+        margin: -8px 0 12px 0;
+      }
     </style>
   </head>
   <body>
@@ -729,6 +816,21 @@
         <div class="actions">
           <button class="btn btn-primary" id="restart-now-btn" onclick="restartContainer()">Restart Now</button>
           <button class="btn btn-outline" onclick="dismissRestartPrompt()">Later</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="run-modal" class="run-modal hidden">
+      <div class="modal">
+        <h2>Run Command</h2>
+        <div class="run-sub" id="run-modal-sub">on <span id="run-svc-name"></span></div>
+        <input type="text" id="run-command-input" placeholder="e.g. ls -la /usr/local/tomcat" spellcheck="false" onkeydown="onRunKeydown(event)" autocomplete="off" />
+        <div class="run-history-hint"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="vertical-align:middle"><path d="M5 1L9 7H1Z" fill="var(--muted)"/></svg> <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="vertical-align:middle"><path d="M5 9L1 3H9Z" fill="var(--muted)"/></svg> arrow keys recall previous commands</div>
+        <div class="run-output" id="run-output"></div>
+        <div class="run-actions">
+          <button class="btn btn-primary btn-sm" id="run-exec-btn" onclick="runCommand()">Execute</button>
+          <button class="btn btn-outline btn-sm" onclick="closeRunModal()">Close</button>
+          <span class="run-loading" id="run-loading">running...</span>
         </div>
       </div>
     </div>
@@ -1213,6 +1315,9 @@
           const logsBtn = s.running
             ? `<span class="log-toggle btn btn-outline btn-sm" onclick="toggleLogs('${name}')">▶ Show Logs</span>`
             : "";
+          const runBtn = s.running
+            ? `<span class="btn btn-outline btn-sm" onclick="openRunModal('${name}')">▶ Run</span>`
+            : "";
           const dozzleLink =
             s.running && s.container_id
               ? `<a href="${escAttr(s.dozzle_url)}" target="_blank" class="btn btn-outline btn-sm" title="View in Dozzle">Dozzle ↗</a>`
@@ -1220,7 +1325,7 @@
           const propsBtn = s.name === "alfresco"
             ? `<span class="props-toggle btn btn-outline btn-sm" onclick="toggleProperties()">${propertiesOpen ? '▼ Properties' : '▶ Edit Global Properties'}</span>`
             : "";
-          html += `<tr><td class="name-cell">${esc(s.name)}${profileTag}<span class="service-buttons">${propsBtn}${logsBtn}${dozzleLink}</span></td><td><span class="status-dot ${statusClass}"></span> ${statusLabel}</td><td style="text-align:right;white-space:nowrap">${actions}</td></tr>`;
+          html += `<tr id="svc-row-${name}"><td class="name-cell">${esc(s.name)}${profileTag}<span class="service-buttons">${propsBtn}${logsBtn}${runBtn}${dozzleLink}</span></td><td><span class="status-dot ${statusClass}"></span> ${statusLabel}</td><td style="text-align:right;white-space:nowrap">${actions}</td></tr>`;
           html += `<tr class="log-row" id="log-row-${name}"><td colspan="3"><div class="log-content" id="logs-${name}"></div></td></tr>`;
           if (s.name === "alfresco") {
             html += `<tr class="prop-row" id="prop-row-alfresco"><td colspan="3"><div class="prop-content" id="props-alfresco"></div></td></tr>`;
@@ -1322,6 +1427,89 @@
         openLogs.add(name);
         content.textContent = "loading...";
         refreshLogContent(name);
+      }
+
+      let runService = null;
+      let runHistory = [];
+      let runHistoryIndex = -1;
+
+      function onRunKeydown(e) {
+        if (e.key === 'Enter') {
+          runCommand();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (runHistory.length === 0) return;
+          const idx = runHistoryIndex === -1 ? runHistory.length - 1 : Math.max(0, runHistoryIndex - 1);
+          runHistoryIndex = idx;
+          document.getElementById("run-command-input").value = runHistory[idx];
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (runHistoryIndex === -1) return;
+          runHistoryIndex--;
+          const input = document.getElementById("run-command-input");
+          if (runHistoryIndex < 0) {
+            runHistoryIndex = -1;
+            input.value = "";
+          } else {
+            input.value = runHistory[runHistoryIndex];
+          }
+        }
+      }
+
+      function openRunModal(name) {
+        runService = name;
+        runHistoryIndex = -1;
+        document.getElementById("run-svc-name").textContent = name;
+        document.getElementById("run-command-input").value = "";
+        document.getElementById("run-output").className = "run-output";
+        document.getElementById("run-output").textContent = "";
+        document.getElementById("run-modal").classList.remove("hidden");
+        document.getElementById("run-command-input").focus();
+      }
+
+      function closeRunModal() {
+        document.getElementById("run-modal").classList.add("hidden");
+        runService = null;
+      }
+
+      async function runCommand() {
+        const btn = document.getElementById("run-exec-btn");
+        const loading = document.getElementById("run-loading");
+        const output = document.getElementById("run-output");
+        const input = document.getElementById("run-command-input");
+        const cmd = input.value.trim();
+        if (!cmd || !runService) return;
+        runHistory.push(cmd);
+        runHistoryIndex = -1;
+        btn.disabled = true;
+        loading.classList.add("show");
+        output.className = "run-output show";
+        output.textContent = "";
+        try {
+          const data = await api("/api/exec/" + runService, {
+            method: "POST",
+            body: JSON.stringify({ command: cmd }),
+          });
+          if (data.error) {
+            output.innerHTML = '<span class="error-text">ERROR: ' + escHtml(data.error) + '</span>';
+          } else {
+            let text = "";
+            if (data.stdout) text += data.stdout;
+            if (data.stderr) {
+              if (text) text += "\n";
+              text += data.stderr;
+            }
+            if (!text) text = "(no output)";
+            output.textContent = text;
+            if (data.returncode !== 0) {
+              output.innerHTML += '\n<span class="error-text">\u2716 exit code ' + data.returncode + '</span>';
+            }
+          }
+        } catch (e) {
+          output.innerHTML = '<span class="error-text">ERROR: ' + escHtml(e.message) + '</span>';
+        }
+        btn.disabled = false;
+        loading.classList.remove("show");
       }
 
       async function refreshAmps() {

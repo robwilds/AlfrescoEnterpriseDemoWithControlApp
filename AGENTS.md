@@ -96,6 +96,7 @@ Pre-installed extensions live in `DockerCompose/AlfrescoEnterprise/data/services
 | "waiting for Alfresco" banner | Yellow banner below the header visible during start/restart and after clicking "Restart Now" following an AMP/JAR install on Alfresco. Contains an inline Alfresco flower SVG. Disappears right before the "Alfresco is ready" overlay |
 | "Alfresco is ready" overlay | Detects when Alfresco transitions from stopped → running, then after 5s calls `/api/status`. If healthy, shows a modal with "Open Alfresco" (→ `http://localhost:8080`) and "Not now" buttons |
 | Container logs | Inline expandable log viewer per running service (last 20 lines via `/api/logs/<service>`). Logs auto-refresh every poll cycle while the accordion is open, and auto-scroll to the bottom on each update. Dozzle link opens container logs on port 9999 |
+| Run Command | "▶ Run" button on each running service opens a modal. Type any shell command and execute via `docker exec <cid> sh -c "<cmd>"`. Supports ↑/↓ arrow keys for command history within the session |
 | AMP / JAR installation | Upload files to the `installs/` directory, then install AMPs into running containers via MMT, or copy JARs into WEB-INF/lib. Shows "Restart Required" prompt after install. Clicking "Restart Now" for Alfresco triggers the "waiting for Alfresco" banner |
 | Safe JAR removal | Only manually installed JARs show the Remove button — built-in Alfresco/Share JARs are protected. Tracked in `mgr/data/installed_jars.json` on the host |
 | Safe AMP removal | 3-layer mechanism: (1) `alfresco-mmt list` gets all installed modules; (2) container amps dir is scanned for `*.applied` files, each unpacked for `module.id`; (3) only modules present in **both** get `removable: true`. Uninstall runs `alfresco-mmt uninstall` then reverts `.applied` → `.amp` |
@@ -124,6 +125,7 @@ The `waitingForAlfresco` flag gates the banner. It is set to `true` in `startAll
 | GET | `/api/docker-status` | Docker installed/running |
 | GET | `/api/docker/quay-status` | Checks which quay.io images are cached using `docker compose config --images` |
 | GET | `/api/logs/<service>` | Last 20 lines of container logs |
+| POST | `/api/exec/<service>` | Run a shell command in a container via `docker exec <cid> sh -c "<cmd>"`. Returns `{stdout, stderr, returncode}` |
 | POST | `/api/start` | `docker compose up -d --pull missing` (no profiles → only non-profile-gated services) |
 | POST | `/api/stop` | `docker compose stop` (stops all) |
 | POST | `/api/restart` | `docker compose restart` (restarts all) |
