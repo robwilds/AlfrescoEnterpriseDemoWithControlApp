@@ -39,8 +39,12 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 - **Install JAR** — copies into container's `WEB-INF/lib`; tracks in `installed_jars.json` for later removal
 - **Install All** — batch-installs all uninstalled AMPs and JARs for a service with progress counter
 - **Install status detection** — uses MMT's module list for accurate AMP install status (module ID extracted from AMP's `module.properties`), falling back to `.applied` file check if the AMP was deleted locally
-- **Safe JAR removal** — only manually installed JARs show a Remove button; built-in Alfresco/Share JARs are protected
-- **Safe AMP removal** — only AMPs installed via the Control Plane (those with a `.applied` file in the container's amps dir) show a Remove button; clicking it runs `alfresco-mmt uninstall` to remove the module from the WAR and reverts `.applied` → `.amp` so it reappears as pending
+- **Safe AMP removal (3-layer mechanism)** — AMPs installed via the Control Plane show a Remove button; pre-installed AMPs (shipped with the WAR) do not. The detection works as follows:
+  1. **MMT list** — `alfresco-mmt list` runs inside each container (Alfresco and Share) to enumerate all modules currently installed in the WAR
+  2. **`.applied` file scan** — the container's `amps/` (or `amps_share/`) directory is scanned for `*.applied` files. When the Control Plane installs an AMP via MMT, it renames the `.amp` → `.applied` to mark it as Control Plane-managed. Each `.applied` file is copied out and opened as a ZIP; its `module.properties` is read to extract `module.id`
+  3. **Cross-reference** — a module only gets `removable: true` if its ID appears in **both** the MMT list and the `.applied` scan. Pre-installed AMPs have no `.applied` file on disk, so they never match. See `server.py:_get_applied_amp_ids()` and `server.py:api_list_amps()`
+- **Uninstall flow** — clicking Remove runs `alfresco-mmt uninstall <module_id>` to purge it from the WAR, then locates the matching `.applied` file and renames it back to `.amp` so it reappears as pending (see `server.py:do_uninstall_amp()`)
+- **Safe JAR removal** — only manually installed JARs show a Remove button; built-in Alfresco/Share JARs are protected. Tracked in `mgr/data/installed_jars.json` on the host (see `server.py:api_list_jars()`)
 - **Pending vs installed** — AMP files in the container's `amps/` directory shown as pending; already-installed AMPs shown with install status
 - **Delete file** — remove uploaded files from the `installs/` directory
 
