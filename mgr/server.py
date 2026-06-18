@@ -89,10 +89,6 @@ def _get_amp_module_id(local_path):
         return None
     return None
 
-
-
-
-
 def _get_installed_amp_ids(container, svc):
     """Return set of installed AMP module IDs via MMT list."""
     if not container:
