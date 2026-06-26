@@ -19,7 +19,14 @@ services:
     image: quay.io/alfresco/alfresco-governance-repository-enterprise:26.1.0
     mem_limit: 1900m
     depends_on:
-      - ldap
+      ldap:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      activemq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     environment:
       JAVA_TOOL_OPTIONS: >-
         -Dencryption.keystore.type=JCEKS

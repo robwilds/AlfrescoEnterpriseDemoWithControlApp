@@ -1142,12 +1142,19 @@
 
       function checkPendingAction(data) {
         if (!pendingAction) return;
-        const appropriate = data.filter(isAppropriate);
-        let done = false;
+        var done = false;
         if (pendingAction === 'start' || pendingAction === 'restart') {
-          done = appropriate.every(s => s.running);
+          if (startingServices.size > 0) {
+            // Per-service start: only wait for the explicitly requested services
+            done = data.every(function(s) {
+              return !startingServices.has(s.name) || s.running;
+            });
+          } else {
+            // Start All / Restart All: wait for all appropriate services
+            done = data.filter(isAppropriate).every(function(s) { return s.running; });
+          }
         } else if (pendingAction === 'stop') {
-          done = appropriate.every(s => !s.running);
+          done = data.filter(isAppropriate).every(function(s) { return !s.running; });
         }
         if (done) {
           pendingAction = null;
@@ -1426,13 +1433,20 @@
         api(`/api/logs/${name}`).then(function (data) {
           const content = document.getElementById(`logs-${name}`);
           if (!content) return;
+          var prevScrollTop = content.scrollTop;
+          var prevScrollHeight = content.scrollHeight;
+          var atBottom = (prevScrollTop + content.clientHeight >= prevScrollHeight - 40);
           if (data.logs && data.logs.length > 0) {
             content.innerHTML = data.logs.map(highlightLine).join("\n");
           } else {
             content.textContent = "(no log output)";
           }
           logCache[name] = data.logs ? data.logs.join("\n") : "";
-          content.scrollTop = content.scrollHeight;
+          if (atBottom) {
+            content.scrollTop = content.scrollHeight;
+          } else {
+            content.scrollTop = prevScrollTop;
+          }
         }).catch(function () {
           // keep stale logs on error
         });
