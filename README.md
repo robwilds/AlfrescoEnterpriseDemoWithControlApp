@@ -23,6 +23,7 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 - **Start / Stop / Restart All** — 1-second auto-refresh polling until services reach target state; smart filtering excludes profile-gated services
 - **Per-service controls** — start, stop, restart individual containers with status indicators
 - **Services dashboard** — real-time status of all containers (running/stopped) with profile badges and colour-coded summary
+- **"starting…" indicator** — when a service is starting, its status row shows an animated pulsing dot with "starting…" text that persists until the container reports healthy; applies to both bulk and per-service start
 - **"Start all services?" prompt** — shown when Docker is ready but no services are running; one-click start
 - **Docker overlay** — if Docker isn't running, prompts to launch Docker Desktop or retry; waits for it to become ready
 
@@ -74,8 +75,8 @@ The **Control Plane** (`start.sh`) is a Python stdlib web server on **port 9700*
 ### Smart Refresh
 
 - **Normal polling** — 5-second interval for service status, AMPs, JARs, and files
-- **Fast polling** — 1-second interval during start/stop/restart operations
-- **Target state detection** — waits until all appropriate services reach the expected state (running or stopped) before reverting to normal poll
+- **Fast polling** — 1-second interval during start/stop/restart operations — applies to both **Start All** and individual **Start/Restart** service buttons
+- **Target state detection** — waits until all appropriate services reach the expected state (running or stopped) before reverting to normal poll; per-service starts only wait for the clicked service
 - **Appropriate service filtering** — services with `donotstart` or `disabled` profiles excluded from state checks
 
 ### Guided Tour

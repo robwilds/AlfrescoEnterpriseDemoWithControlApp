@@ -102,12 +102,14 @@ Pre-installed extensions live in `DockerCompose/AlfrescoEnterprise/data/services
 | Safe AMP removal | 3-layer mechanism: (1) `alfresco-mmt list` gets all installed modules; (2) container amps dir is scanned for `*.applied` files, each unpacked for `module.id`; (3) only modules present in **both** get `removable: true`. Uninstall runs `alfresco-mmt uninstall` then reverts `.applied` → `.amp` |
 | AMP install / remove detection | Installed AMPs listed via `alfresco-mmt list`. The `removable` flag is determined dynamically by scanning the container's amps dir for `.applied` files, extracting each one's `module.id` via `module.properties`, and cross-referencing with MMT's module list |
 | Quay.io login | Credential overlay shown only when `docker compose config --images` reveals quay.io images that are not locally cached. Uses `docker login quay.io` to authenticate, then starts containers |
-| Refresh interval | Normal polling is 5 seconds (`setInterval` in `restoreNormalRefresh`). Fast polling (1s) during start/stop/restart operations |
+ | Refresh interval | Normal polling is 5 seconds (`setInterval` in `restoreNormalRefresh`). Fast polling (1s) during start/stop/restart operations |
+| **"starting…" indicator** | Services in transition show an animated pulsing dot with "starting…" text. A `startingServices` Set tracks per-service start requests; auto-clears when the service reports `running`. Bulk Start All marks all stopped appropriate services as starting; per-service Start only marks the clicked service |
+| Per-service fast refresh | `svcAction('start')` and `svcAction('restart')` now call `startFastRefreshUntil(action)` so the UI updates every 1s until the container reaches the target state, matching the existing Start All/Stop All/Restart All behavior |
 
 ### Smart refresh behavior
 
 The `startFastRefreshUntil(action)` function (JS in `index.html`) replaces the old fixed-timeout fast refresh. It polls `/api/services` every 1 second and checks `checkPendingAction(data)`:
-- For `start`/`restart`: waits until all *appropriate* services (`.isAppropriate()` — filters out `donotstart`/`disabled` profile services) are `running`
+- For `start`/`restart`: waits until all *appropriate* services (`.isAppropriate()` — filters out `donotstart`/`disabled` profile services) are `running`. Per-service start also triggers this, and the `startingServices` Set ensures only the clicked service shows "starting…".
 - For `stop`: waits until all appropriate services are `stopped`
 - Once done, clears `pendingAction` and calls `restoreNormalRefresh()` (reverts to 5s)
 
